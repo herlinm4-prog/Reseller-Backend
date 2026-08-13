@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resellers Backend Tester</title>
+<style>
+  :root{ --ink:#0A0E12; --surface:#12171D; --stroke:#242B33; --text:#F4F6F8; --dim:#8993A1; --mint:#2EE6A6; --coral:#FF6859; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; min-height:100vh; background:var(--ink); color:var(--text); font-family:-apple-system, system-ui, sans-serif; padding:24px 18px 60px; }
+  h1{ font-size:20px; margin:0 0 4px; }
+  p.sub{ color:var(--dim); font-size:13px; margin:0 0 24px; }
+  label{ display:block; font-size:12px; color:var(--dim); margin:16px 0 6px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  input{ width:100%; background:var(--surface); border:1px solid var(--stroke); color:var(--text); border-radius:12px; padding:13px 14px; font-size:15px; }
+  button{ margin-top:22px; width:100%; border:none; border-radius:14px; padding:15px; background:var(--mint); color:#062017; font-weight:700; font-size:15px; }
+  button:disabled{ opacity:0.6; }
+  #result{ margin-top:22px; background:var(--surface); border:1px solid var(--stroke); border-radius:14px; padding:16px; font-family:ui-monospace, monospace; font-size:12.5px; white-space:pre-wrap; word-break:break-all; display:none; }
+  #result.show{ display:block; }
+  #result.error{ border-color:var(--coral); color:var(--coral); }
+  .status{ font-size:12px; color:var(--dim); margin-top:10px; }
+</style>
+</head>
+<body>
+  <h1>Resellers Backend Tester</h1>
+  <p class="sub">Sends a real POST to your deployed backend and shows the raw JSON response.</p>
+
+  <label>Backend URL</label>
+  <input id="baseUrl" value="https://reseller-backend-9exp.onrender.com" />
+
+  <label>Barcode</label>
+  <input id="barcode" value="0193151234567" inputmode="numeric" />
+
+  <label>Cost price (optional)</label>
+  <input id="cost" value="12.99" inputmode="decimal" />
+
+  <button id="sendBtn" onclick="sendTest()">Send test request</button>
+  <div class="status" id="status"></div>
+  <pre id="result"></pre>
+
+<script>
+async function sendTest(){
+  const btn = document.getElementById('sendBtn');
+  const statusEl = document.getElementById('status');
+  const resultEl = document.getElementById('result');
+  const base = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+  const barcode = document.getElementById('barcode').value.trim();
+  const cost = document.getElementById('cost').value.trim();
+
+  resultEl.classList.remove('show', 'error');
+  btn.disabled = true;
+  statusEl.textContent = 'Sending request… (free-tier services can take up to 50s to wake up)';
+
+  try {
+    const res = await fetch(base + '/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode, costPrice: cost ? Number(cost) : undefined })
+    });
+    const text = await res.text();
+    let pretty = text;
+    try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch(e) {}
+
+    statusEl.textContent = `HTTP ${res.status}`;
+    resultEl.textContent = pretty;
+    resultEl.classList.add('show');
+    if(!res.ok) resultEl.classList.add('error');
+  } catch (err) {
+    statusEl.textContent = 'Network error';
+    resultEl.textContent = String(err);
+    resultEl.classList.add('show', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
