@@ -71,7 +71,8 @@ async function searchActiveListings(query, limit = 30) {
         price,
         shipping: Number.isNaN(shipping) ? null : shipping,
         buyingOptions: item.buyingOptions || [],
-        condition: item.condition || null
+        condition: item.condition || null,
+        title: item.title || ''
       };
     })
     .filter(Boolean);
