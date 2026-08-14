@@ -55,9 +55,26 @@ async function searchActiveListings(query, limit = 30) {
   const data = await res.json();
   if (!data.itemSummaries) return [];
 
+  // Pull everything Browse API actually gives us per listing, not just
+  // price: buyingOptions (to tell auctions from Buy-It-Now), shipping cost
+  // (to replace guessed shipping with a real market estimate) and condition.
   return data.itemSummaries
-    .map((item) => parseFloat(item.price && item.price.value))
-    .filter((price) => !Number.isNaN(price));
+    .map((item) => {
+      const price = parseFloat(item.price && item.price.value);
+      if (Number.isNaN(price)) return null;
+
+      const shippingOption = item.shippingOptions && item.shippingOptions[0];
+      const shippingValue = shippingOption && shippingOption.shippingCost && shippingOption.shippingCost.value;
+      const shipping = shippingValue != null ? parseFloat(shippingValue) : null;
+
+      return {
+        price,
+        shipping: Number.isNaN(shipping) ? null : shipping,
+        buyingOptions: item.buyingOptions || [],
+        condition: item.condition || null
+      };
+    })
+    .filter(Boolean);
 }
 
 module.exports = { searchActiveListings };
