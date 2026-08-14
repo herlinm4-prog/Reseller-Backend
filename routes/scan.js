@@ -8,13 +8,22 @@ const { analyzePrices } = require('../lib/pricing');
 
 router.post('/', async (req, res) => {
   try {
-    const { barcode, costPrice } = req.body || {};
-    if (!barcode) {
-      return res.status(400).json({ error: 'Falta "barcode" en el cuerpo de la petición.' });
+    const { barcode, query: manualQuery, costPrice } = req.body || {};
+    if (!barcode && !manualQuery) {
+      return res.status(400).json({ error: 'Falta "barcode" o "query" en el cuerpo de la petición.' });
     }
 
-    const product = await lookupProduct(barcode);
-    const query = product && product.title ? `${product.brand || ''} ${product.title}`.trim() : barcode;
+    let product = null;
+    let query;
+
+    if (manualQuery && manualQuery.trim()) {
+      // Manual text search (e.g. "Wrong product?" correction, or Ross/Burlington
+      // items whose barcode doesn't resolve to anything useful on eBay).
+      query = manualQuery.trim();
+    } else {
+      product = await lookupProduct(barcode);
+      query = product && product.title ? `${product.brand || ''} ${product.title}`.trim() : barcode;
+    }
 
     const soldPrices = await getSoldPrices(query);
     const usingSoldData = Array.isArray(soldPrices) && soldPrices.length > 0;
